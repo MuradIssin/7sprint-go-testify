@@ -3,45 +3,43 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestMainHandlerWhenCountMoreThanTotal(t *testing.T) {
-	totalCount := 4
-	// req := ... // здесь нужно создать запрос к сервису
+func TestMainHandlerStatusOkAndBodyNotEmpty(t *testing.T) {
+	req := httptest.NewRequest("GET", "/cafe?count=2&city=moscow", nil)
 
 	responseRecorder := httptest.NewRecorder()
 	handler := http.HandlerFunc(mainHandle)
 	handler.ServeHTTP(responseRecorder, req)
 
-	// здесь нужно добавить необходимые проверки
+	assert.Equal(t, http.StatusOK, responseRecorder.Code)
+	require.NotEmpty(t, responseRecorder.Body.String())
 }
 
-// func TestMainHandlerWhenOk(t *testing.T) {
-//     req := httptest.NewRequest("GET", "/cafe?count=2&city=moscow", nil)
+func TestMainHandlerCityIsNotSupported(t *testing.T) {
+	req := httptest.NewRequest("GET", "/cafe?count=2&city=tula", nil)
 
-//     responseRecorder := httptest.NewRecorder()
-//     handler := http.HandlerFunc(mainHandle)
-//     handler.ServeHTTP(responseRecorder, req)
+	responseRecorder := httptest.NewRecorder()
+	handler := http.HandlerFunc(mainHandle)
+	handler.ServeHTTP(responseRecorder, req)
 
-//     if status := responseRecorder.Code; status != http.StatusOK {
-//         t.Errorf("expected status code: %d, got %d", http.StatusOK, status)
-//     }
-// }
+	assert.Equal(t, http.StatusBadRequest, responseRecorder.Code)
+	require.Equal(t, "wrong city value", responseRecorder.Body.String())
+}
 
-// func TestMainHandlerWhenMissingCount(t *testing.T) {
-//     req := httptest.NewRequest("GET", "/cafe?city=moscow", nil)
+func TestMainHandlerWhenCountMoreThanTotal(t *testing.T) {
+	totalCount := 4
+	req := httptest.NewRequest("GET", "/cafe?count=8&city=moscow", nil)
 
-//     responseRecorder := httptest.NewRecorder()
-//     handler := http.HandlerFunc(mainHandle)
-//     handler.ServeHTTP(responseRecorder, req)
+	responseRecorder := httptest.NewRecorder()
+	handler := http.HandlerFunc(mainHandle)
+	handler.ServeHTTP(responseRecorder, req)
 
-//     if status := responseRecorder.Code; status != http.StatusBadRequest {
-//         t.Errorf("expected status code: %d, got %d", http.StatusBadRequest, status)
-//     }
-
-//     expected := `count missing`
-//     if responseRecorder.Body.String() != expected {
-//         t.Errorf("expected body: %s, got %s", expected, responseRecorder.Body.String())
-//     }
-// }
+	resCount := len(strings.Split(responseRecorder.Body.String(), ","))
+	require.Equal(t, totalCount, resCount)
+}
